@@ -152,14 +152,13 @@
     .home-page.dark  .link-card-title { color: #f1f5f9; }
     .link-card-desc { font-size: 0.72rem; color: #64748b; line-height: 1.4; }
 
-    /* Entry / Splash Page */
+    /* Splash Page — standalone full-viewport page, not an overlay */
     .entry-page {
-      position: fixed;
-      inset: 0;
+      height: 100vh;
       background: #0f172a;
       display: flex;
       flex-direction: column;
-      z-index: 9999;
+      overflow: hidden;
     }
     .entry-graphic {
       flex: 1;
@@ -1198,7 +1197,7 @@ const EntryPage = ({ onEnter }) => {
         <div className="entry-title">Tech<span>Tools</span></div>
         <div className="entry-sub">A collection of networking utilities</div>
         <div className="entry-links">
-          <button className="entry-btn" onClick={onEnter}>Enter</button>
+          <button className="entry-btn" onClick={onEnter}>Open TechTools →</button>
         </div>
       </div>
     </div>
@@ -1209,18 +1208,25 @@ const EntryPage = ({ onEnter }) => {
    SHELL
    ══════════════════════════════════════════════════════ */
 function App() {
-  const [entered, setEntered] = useState(false);
-  const [active, setActive] = useState('home');
+  // 'splash' is the top-level site home; 'techtools' is the subsite
+  const [page, setPage]         = useState('splash');
+  const [active, setActive]     = useState('home');
   const [darkMode, setDarkMode] = useState(false);
 
-  if (!entered) {
-    return <EntryPage onEnter={() => setEntered(true)} />;
+  if (page === 'splash') {
+    return <EntryPage onEnter={() => setPage('techtools')} />;
   }
 
   return (
     <>
       <nav className="hub-nav">
-        <div className="hub-brand" onClick={() => setActive('home')}>Tech<span>Tools</span></div>
+        {/* Brand acts as site-level home — returns to splash */}
+        <div className="hub-brand" onClick={() => setPage('splash')}>Tech<span>Tools</span></div>
+        {/* Home tab is the tools portal within the subsite */}
+        <button
+          className={`hub-tab${active === 'home' ? ' active' : ''}`}
+          onClick={() => setActive('home')}
+        >Home</button>
         <button className="dark-toggle" onClick={() => setDarkMode(d => !d)}>
           {darkMode ? '☀️ Light' : '🌙 Dark'}
         </button>
