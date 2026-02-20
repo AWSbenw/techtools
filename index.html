@@ -151,6 +151,45 @@
     .home-page.light .link-card-title { color: #1e293b; }
     .home-page.dark  .link-card-title { color: #f1f5f9; }
     .link-card-desc { font-size: 0.72rem; color: #64748b; line-height: 1.4; }
+
+    /* Entry / Splash Page */
+    .entry-page {
+      position: fixed;
+      inset: 0;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .entry-title {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .entry-title span { color: #38bdf8; }
+    .entry-sub {
+      font-size: 1rem;
+      color: #64748b;
+      margin-bottom: 3rem;
+    }
+    .entry-btn {
+      background: #38bdf8;
+      color: #0f172a;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.85rem 2.5rem;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .entry-btn:hover { background: #7dd3fc; transform: translateY(-2px); }
+    .entry-btn:active { transform: translateY(0); }
   </style>
 </head>
 <body>
@@ -985,11 +1024,28 @@ const HomePage = ({ onSelect, darkMode }) => (
 );
 
 /* ══════════════════════════════════════════════════════
+   ENTRY / SPLASH PAGE
+   ══════════════════════════════════════════════════════ */
+const EntryPage = ({ onEnter }) => (
+  <div className="entry-page">
+    <div className="entry-title">Tech<span>Tools</span></div>
+    <div className="entry-sub">A collection of networking utilities</div>
+    <button className="entry-btn" onClick={onEnter}>Click to Enter</button>
+  </div>
+);
+
+/* ══════════════════════════════════════════════════════
    SHELL
    ══════════════════════════════════════════════════════ */
 function App() {
+  const [entered, setEntered] = useState(false);
   const [active, setActive] = useState('home');
   const [darkMode, setDarkMode] = useState(false);
+
+  if (!entered) {
+    return <EntryPage onEnter={() => setEntered(true)} />;
+  }
+
   return (
     <>
       <nav className="hub-nav">
