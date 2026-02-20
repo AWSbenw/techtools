@@ -189,11 +189,17 @@
       letter-spacing: -0.02em;
       margin: 0;
     }
+    .entry-title {
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+    .entry-title:hover { opacity: 0.8; }
     .entry-title span { color: #38bdf8; }
     .entry-sub {
       font-size: 0.9rem;
       color: #64748b;
-      margin: 0 0 1rem;
+      margin: 0;
     }
     .entry-links {
       display: flex;
@@ -1194,11 +1200,8 @@ const EntryPage = ({ onEnter }) => {
         <canvas ref={canvasRef} className="entry-canvas" />
       </div>
       <div className="entry-footer">
-        <div className="entry-title">Tech<span>Tools</span></div>
+        <div className="entry-title" onClick={onEnter}>Tech<span>Tools</span></div>
         <div className="entry-sub">A collection of networking utilities</div>
-        <div className="entry-links">
-          <button className="entry-btn" onClick={onEnter}>Open TechTools →</button>
-        </div>
       </div>
     </div>
   );
