@@ -1070,16 +1070,24 @@ const EntryPage = ({ onEnter }) => {
     window.addEventListener('resize', setSize);
 
     const d2r = d => d * Math.PI / 180;
-    const arcPath = (r, s, e) => ctx.arc(0, 0, r, d2r(s - 90), d2r(e - 90));
+    const STEPS = 900; // points sampled per ring
 
-    // Each ring: fraction of base radius, rotation speed (rad/s), clockwise,
-    // arc segments [startDeg, endDeg], tick count, major-tick interval, node degrees
+    // Rehoboam-style rings:
+    //   f      – fraction of base radius
+    //   spd    – rotation speed (rad/s) — slow, deliberate
+    //   cw     – clockwise rotation
+    //   wave   – { n: harmonic count, a: amplitude as fraction of base }
+    //   events – divergence spikes { a: degrees, h: height as fraction of base }
+    //   gaps   – degree ranges where the ring is not drawn
+    //   lw     – line width
+    //   alpha  – base opacity of ring line
     const RINGS = [
-      { f: 0.30, spd: 0.20,  cw: true,  arcs: [[0,300]],                    ticks: 24, maj: 6,  nodes: [50, 200] },
-      { f: 0.44, spd: -0.13, cw: false, arcs: [[20,170],[200,350]],          ticks: 32, maj: 8,  nodes: [100, 260] },
-      { f: 0.58, spd: 0.16,  cw: true,  arcs: [[0,120],[150,310],[340,360]], ticks: 48, maj: 12, nodes: [60, 230, 315] },
-      { f: 0.72, spd: -0.09, cw: false, arcs: [[30,200],[230,360]],          ticks: 60, maj: 15, nodes: [115, 295] },
-      { f: 0.90, spd: 0.06,  cw: true,  arcs: [[0,80],[110,240],[270,360]],  ticks: 72, maj: 18, nodes: [] },
+      { f: 0.18, spd:  0.055, cw: true,  wave: { n: 4,  a: 0.028 }, events: [{ a: 55,  h: 0.10 }, { a: 215, h: 0.14 }],                                          gaps: [],               lw: 0.90, alpha: 0.78 },
+      { f: 0.30, spd: -0.038, cw: false, wave: { n: 7,  a: 0.020 }, events: [{ a: 30,  h: 0.09 }, { a: 145, h: 0.13 }, { a: 295, h: 0.07 }],                     gaps: [[195, 222]],     lw: 0.75, alpha: 0.68 },
+      { f: 0.44, spd:  0.028, cw: true,  wave: { n: 11, a: 0.015 }, events: [{ a: 70,  h: 0.10 }, { a: 175, h: 0.08 }, { a: 265, h: 0.12 }, { a: 345, h: 0.06 }],gaps: [[108, 126]],     lw: 0.70, alpha: 0.60 },
+      { f: 0.58, spd: -0.020, cw: false, wave: { n: 16, a: 0.010 }, events: [{ a: 18,  h: 0.08 }, { a: 120, h: 0.10 }, { a: 315, h: 0.07 }],                     gaps: [[48,68],[242,262]], lw: 0.60, alpha: 0.52 },
+      { f: 0.74, spd:  0.014, cw: true,  wave: { n: 22, a: 0.007 }, events: [{ a: 48,  h: 0.07 }, { a: 162, h: 0.09 }, { a: 278, h: 0.06 }],                     gaps: [],               lw: 0.55, alpha: 0.42 },
+      { f: 0.92, spd: -0.009, cw: false, wave: { n: 30, a: 0.005 }, events: [],                                                                                   gaps: [[128,158],[308,338]], lw: 0.50, alpha: 0.28 },
     ];
 
     const draw = ts => {
@@ -1087,83 +1095,128 @@ const EntryPage = ({ onEnter }) => {
       if (canvas.width !== W || canvas.height !== H) setSize();
       const w = canvas.width, h = canvas.height;
       const cx = w / 2, cy = h / 2;
-      const base = Math.min(w, h) * 0.44;
+      const base = Math.min(w, h) * 0.46;
       ctx.clearRect(0, 0, w, h);
       const t = ts * 0.001;
 
-      RINGS.forEach(ring => {
+      // Global pulse factor – modulates spike heights slightly
+      const pulse = 0.88 + 0.12 * Math.sin(t * 1.4);
+
+      RINGS.forEach((ring, ri) => {
         const r   = base * ring.f;
         const rot = t * ring.spd * (ring.cw ? 1 : -1);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(rot);
 
-        // Soft glow behind arc
-        ring.arcs.forEach(([s, e]) => {
-          ctx.beginPath(); arcPath(r, s, e);
-          ctx.strokeStyle = 'rgba(56,189,248,0.10)';
-          ctx.lineWidth = 5;
-          ctx.stroke();
-        });
-        // Crisp arc line
-        ring.arcs.forEach(([s, e]) => {
-          ctx.beginPath(); arcPath(r, s, e);
-          ctx.strokeStyle = 'rgba(56,189,248,0.55)';
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
-        });
+        // Very faint ghost circle as reference baseline
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(248,250,252,0.04)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
 
-        // Tick marks around full ring
-        for (let i = 0; i < ring.ticks; i++) {
-          const a   = (i / ring.ticks) * Math.PI * 2 - Math.PI / 2;
-          const big = i % ring.maj === 0;
-          const ext = big ? 7 : 4;
-          ctx.beginPath();
-          ctx.moveTo(Math.cos(a) * (r - ext), Math.sin(a) * (r - ext));
-          ctx.lineTo(Math.cos(a) * (r + ext), Math.sin(a) * (r + ext));
-          ctx.strokeStyle = big ? 'rgba(56,189,248,0.45)' : 'rgba(56,189,248,0.18)';
-          ctx.lineWidth   = big ? 0.8 : 0.5;
-          ctx.stroke();
+        // Build polyline segments, skipping gap ranges
+        const segments = [];
+        let seg = null;
+        for (let i = 0; i <= STEPS; i++) {
+          const theta = (i / STEPS) * Math.PI * 2;
+          const deg   = theta * 180 / Math.PI;
+
+          // Skip gap regions
+          const inGap = ring.gaps.some(([s, e]) => deg >= s && deg <= e);
+          if (inGap) {
+            if (seg) { segments.push(seg); seg = null; }
+            continue;
+          }
+
+          // Sine-wave radial distortion — gives the Rehoboam "waveform on a circle" look
+          // Each ring has a unique phase offset so they don't all peak together
+          const wave = ring.wave.a * base * Math.sin(ring.wave.n * theta + ri * 1.1);
+
+          // Divergence spikes — narrow gaussian bumps at event angles
+          let spike = 0;
+          ring.events.forEach(ev => {
+            const evT  = d2r(ev.a);
+            const diff = Math.atan2(Math.sin(theta - evT), Math.cos(theta - evT));
+            spike += ev.h * base * pulse * Math.exp(-(diff * diff) / 0.0007);
+          });
+
+          const rr = r + wave + spike;
+          const x  = Math.cos(theta - Math.PI / 2) * rr;
+          const y  = Math.sin(theta - Math.PI / 2) * rr;
+          if (!seg) seg = [{ x, y }];
+          else seg.push({ x, y });
         }
+        if (seg) segments.push(seg);
 
-        // Node dots with glow
-        ring.nodes.forEach(deg => {
-          const a = d2r(deg - 90);
-          const nx = Math.cos(a) * r, ny = Math.sin(a) * r;
-          const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, 8);
-          g.addColorStop(0, 'rgba(56,189,248,0.7)');
-          g.addColorStop(1, 'rgba(56,189,248,0)');
-          ctx.beginPath(); ctx.arc(nx, ny, 8, 0, Math.PI * 2);
-          ctx.fillStyle = g; ctx.fill();
-          ctx.beginPath(); ctx.arc(nx, ny, 2, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(56,189,248,1)'; ctx.fill();
+        // Draw the wavy ring
+        ctx.strokeStyle = `rgba(248,250,252,${ring.alpha})`;
+        ctx.lineWidth   = ring.lw;
+        segments.forEach(pts => {
+          if (pts.length < 2) return;
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.stroke();
+        });
+
+        // Divergence event markers — radial tick from ring through to spike peak, cyan dot at tip
+        ring.events.forEach(ev => {
+          const evT   = d2r(ev.a);
+          const peakR = r + ev.h * base * pulse;
+          const cx2   = Math.cos(evT - Math.PI / 2);
+          const cy2   = Math.sin(evT - Math.PI / 2);
+          // Thin radial line from ring inward edge to spike tip
+          ctx.beginPath();
+          ctx.moveTo(cx2 * (r - 3), cy2 * (r - 3));
+          ctx.lineTo(cx2 * peakR,   cy2 * peakR);
+          ctx.strokeStyle = 'rgba(56,189,248,0.22)';
+          ctx.lineWidth   = 0.5;
+          ctx.stroke();
+          // Cyan peak dot
+          ctx.beginPath();
+          ctx.arc(cx2 * peakR, cy2 * peakR, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(56,189,248,0.88)';
+          ctx.fill();
         });
 
         ctx.restore();
       });
 
-      // Pulsing centre glow
-      const pulse = 0.6 + 0.4 * Math.sin(t * 1.8);
-      const pg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28 * pulse);
-      pg.addColorStop(0, 'rgba(56,189,248,0.35)');
-      pg.addColorStop(1, 'rgba(56,189,248,0)');
-      ctx.beginPath(); ctx.arc(cx, cy, 28 * pulse, 0, Math.PI * 2);
-      ctx.fillStyle = pg; ctx.fill();
-
-      // Centre dot
-      ctx.beginPath(); ctx.arc(cx, cy, 2.5 + pulse, 0, Math.PI * 2);
-      ctx.fillStyle = '#38bdf8'; ctx.fill();
-
-      // Cross-hair lines from centre
-      [0, 1, 2, 3].forEach(i => {
-        const a = i * Math.PI / 2;
+      // Outer protractor tick ring — stationary reference frame
+      ctx.save();
+      ctx.translate(cx, cy);
+      const outerR = base * 0.97;
+      for (let i = 0; i < 120; i++) {
+        const a   = (i / 120) * Math.PI * 2 - Math.PI / 2;
+        const big = i % 10 === 0;
+        const len = big ? 7 : 3;
         ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(a) * 5,  cy + Math.sin(a) * 5);
-        ctx.lineTo(cx + Math.cos(a) * 14, cy + Math.sin(a) * 14);
-        ctx.strokeStyle = 'rgba(56,189,248,0.55)';
-        ctx.lineWidth = 1;
+        ctx.moveTo(Math.cos(a) * (outerR - len), Math.sin(a) * (outerR - len));
+        ctx.lineTo(Math.cos(a) *  outerR,         Math.sin(a) *  outerR);
+        ctx.strokeStyle = big ? 'rgba(248,250,252,0.28)' : 'rgba(248,250,252,0.09)';
+        ctx.lineWidth   = big ? 0.8 : 0.5;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Centre — minimal crosshair + small dot, no glow
+      ctx.save();
+      ctx.translate(cx, cy);
+      [0, Math.PI / 2, Math.PI, Math.PI * 1.5].forEach(a => {
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 5,  Math.sin(a) * 5);
+        ctx.lineTo(Math.cos(a) * 12, Math.sin(a) * 12);
+        ctx.strokeStyle = 'rgba(248,250,252,0.18)';
+        ctx.lineWidth   = 0.6;
         ctx.stroke();
       });
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(248,250,252,0.65)';
+      ctx.fill();
+      ctx.restore();
 
       animId = requestAnimationFrame(draw);
     };
