@@ -177,10 +177,26 @@
       border-top: 1px solid #1a0000;
       padding: 1.75rem 2rem;
       display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      flex-wrap: wrap;
+    }
+    .entry-card {
+      display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
       gap: 0.4rem;
+    }
+    .entry-card--clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+    .entry-card--clickable:hover .entry-title { opacity: 0.8; }
+    .entry-card--soon {
+      opacity: 0.4;
     }
     .entry-title {
       font-size: 2.25rem;
@@ -188,18 +204,23 @@
       color: #f8fafc;
       letter-spacing: -0.02em;
       margin: 0;
-    }
-    .entry-title {
-      cursor: pointer;
-      user-select: none;
       transition: opacity 0.15s;
     }
-    .entry-title:hover { opacity: 0.8; }
     .entry-title span { color: #38bdf8; }
     .entry-sub {
       font-size: 0.9rem;
       color: #64748b;
       margin: 0;
+    }
+    .entry-soon-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
     }
     .entry-links {
       display: flex;
@@ -1200,8 +1221,15 @@ const EntryPage = ({ onEnter }) => {
         <canvas ref={canvasRef} className="entry-canvas" />
       </div>
       <div className="entry-footer">
-        <div className="entry-title" onClick={onEnter}>Tech<span>Tools</span></div>
-        <div className="entry-sub">A collection of networking utilities</div>
+        <div className="entry-card entry-card--clickable" onClick={onEnter}>
+          <div className="entry-title">Tech<span>Tools</span></div>
+          <div className="entry-sub">A collection of networking utilities</div>
+        </div>
+        <div className="entry-card entry-card--soon">
+          <div className="entry-title">Fuel<span>Finder</span></div>
+          <div className="entry-sub">Gas prices &amp; station locator</div>
+          <div className="entry-soon-badge">Coming Soon</div>
+        </div>
       </div>
     </div>
   );
